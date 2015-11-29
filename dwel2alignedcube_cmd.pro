@@ -177,6 +177,10 @@ function AlignedDataCube, DWEL_MetaInfo, Flag_H5File, DataCube_File, AlignedMask
       IF shotflag[shotind] EQ 2 THEN BEGIN
         flag_line[j] = 0
       ENDIF
+
+      if shotflag[shotind] eq -1 then begin
+        mask = 0
+      endif 
       
       AncillaryArray[j,*] = [fix(Trigger), fix(SunSensor), ScanEncoder, RotaryEncoder, $
         fix(round(LaserPower*100.0)), fix(round(WaveformMax)), fix(mask), fix(round(10.0*ShotZen)), $
@@ -275,17 +279,18 @@ function AlignedDataCube, DWEL_MetaInfo, Flag_H5File, DataCube_File, AlignedMask
     
 end
 
-pro DWEL2AlignedCube_cmd, DWEL_H5File, Flag_H5File, AlignedMaskFile, DataCube_File, Wavelength, Wavelength_Label, DWEL_Height, $
-  beam_div, srate
+pro DWEL2AlignedCube_cmd, DWEL_H5File, Flag_H5File, AlignedMaskFile, DataCube_File, Wavelength, Wavelength_Label, DWEL_Height, beam_div, srate
   
   compile_opt idl2
-  envi, /restore_base_save_files
-  envi_batch_init, /NO_STATUS_WINDOW
+  ;; envi, /restore_base_save_files
+  ;; envi_batch_init, /NO_STATUS_WINDOW
   
   ND_Nam=['ND0','ND015','ND030','ND1','ND2','ND3','ND045','ND115','ND130','ND145','Unknown']
   DWEL_ND_Filter=0
-  
+
+  print, 'start checking DWEL hdf5 file'
   DWEL_MetaInfo = AlignedCheckDWEL(DWEL_H5File, Wavelength)
+  print, 'start creating data cube'
   HeaderInfo = AlignedDataCube(DWEL_MetaInfo, Flag_H5File, DataCube_File, AlignedMaskFile, Wavelength)
   
   DWEL_MetaInfo.TotalNoScans = HeaderInfo.TotalNoScans
@@ -296,9 +301,8 @@ pro DWEL2AlignedCube_cmd, DWEL_H5File, Flag_H5File, AlignedMaskFile, DataCube_Fi
   last=strpos(DWEL_H5File,path_sep(),/reverse_search)
   f_path=strmid(DWEL_H5File,0,last+1)
   f_base=strtrim(strmid(DWEL_H5File,last+1,strlen(DWEL_H5File)-last-1),2)
-  
-  ;Name_Info=['Original DWEL File =  '+strtrim(f_base,2)]
-  Name_Info=['Original EVI File =  '+strtrim(f_base,2)]
+  print, 'start writing header data'
+  Name_Info=['Original DWEL File =  '+strtrim(f_base,2)]
   Site_Info=[ $
     'Data Start Time = '+'24h00m00s  Monday  August  13 9999',$
     'Data End Time =  '+'24h00m00s  Monday  August  13 9999',$
@@ -352,7 +356,7 @@ pro DWEL2AlignedCube_cmd, DWEL_H5File, Flag_H5File, AlignedMaskFile, DataCube_Fi
   envi_assign_header_value, fid=out_fid, $
     keyword='DWEL_Adaptation', $
     value=DWEL_Adaptation
-  envi_assign_header_value, fid=out_fid, keyword='EVI_Scan_Info', $ ;keyword='DWEL_Scan_Info', $
+  envi_assign_header_value, fid=out_fid, keyword='DWEL_Scan_Info', $
     value=DWEL_Scan_Info
   envi_write_file_header, out_fid
   
@@ -369,7 +373,7 @@ pro DWEL2AlignedCube_cmd, DWEL_H5File, Flag_H5File, AlignedMaskFile, DataCube_Fi
     keyword='DWEL_Adaptation', $
     value=DWEL_Adaptation
   envi_assign_header_value, fid=anc_fid, $
-    keyword='EVI_Scan_Info', $ ;keyword='DWEL_Scan_Info', $
+    keyword='DWEL_Scan_Info', $
     value=DWEL_Scan_Info
     
   envi_write_file_header, anc_fid
